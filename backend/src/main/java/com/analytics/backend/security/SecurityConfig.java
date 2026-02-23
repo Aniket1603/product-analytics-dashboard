@@ -31,14 +31,15 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
 
-                // ✅ Allow preflight
+                // Allow preflight
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // ✅ Public endpoints
+                // Public endpoints
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/seed/**").permitAll()
+                .requestMatchers("/api/clicks/**").permitAll()  // ✅ IMPORTANT
 
-                // ✅ Everything else secured
+                // Everything else secured
                 .anyRequest().authenticated()
             )
             .sessionManagement(session ->
@@ -55,7 +56,6 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // ✅ PRODUCTION + LOCAL CORS
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
@@ -63,7 +63,8 @@ public class SecurityConfig {
 
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:3000",
-                "https://product-analytics-dashboard.vercel.app"
+                "https://product-analytics-dashboard.vercel.app",
+                "https://product-analytics-dashboard-9r5z.onrender.com" // ✅ Render backend
         ));
 
         configuration.setAllowedMethods(List.of(
