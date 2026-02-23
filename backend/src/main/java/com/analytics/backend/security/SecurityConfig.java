@@ -9,19 +9,12 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 public class SecurityConfig {
-
-    private final JwtAuthFilter jwtAuthFilter;
-
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
-        this.jwtAuthFilter = jwtAuthFilter;
-    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -34,19 +27,15 @@ public class SecurityConfig {
                 // Allow preflight
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // Public endpoints
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/seed/**").permitAll()
-                .requestMatchers("/api/clicks/**").permitAll()  // ✅ IMPORTANT
+                // 🔥 Make ALL APIs public (for deployment)
+                .requestMatchers("/api/**").permitAll()
 
-                // Everything else secured
-                .anyRequest().authenticated()
+                // Everything else allowed
+                .anyRequest().permitAll()
             )
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            .addFilterBefore(jwtAuthFilter,
-                    UsernamePasswordAuthenticationFilter.class);
+            );
 
         return http.build();
     }
@@ -64,7 +53,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:3000",
                 "https://product-analytics-dashboard.vercel.app",
-                "https://product-analytics-dashboard-9r5z.onrender.com" // ✅ Render backend
+                "https://product-analytics-dashboard-9r5z.onrender.com"
         ));
 
         configuration.setAllowedMethods(List.of(
