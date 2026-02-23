@@ -18,6 +18,8 @@ import com.analytics.backend.dto.DashboardDTO;
 import com.analytics.backend.dto.FeatureAnalyticsDTO;
 import com.analytics.backend.dto.FeatureClickDTO;
 import com.analytics.backend.model.FeatureClick;
+import com.analytics.backend.model.User;
+import com.analytics.backend.repository.UserRepository;
 import com.analytics.backend.service.FeatureClickService;
 
 @RestController
@@ -26,14 +28,16 @@ import com.analytics.backend.service.FeatureClickService;
 public class FeatureClickController {
 
     private final FeatureClickService featureClickService;
+    private final UserRepository userRepository;
 
-    public FeatureClickController(FeatureClickService featureClickService) {
+    public FeatureClickController(
+            FeatureClickService featureClickService,
+            UserRepository userRepository) {
+
         this.featureClickService = featureClickService;
+        this.userRepository = userRepository;
     }
 
-    // ==============================
-    // ✅ Track Feature Click
-    // ==============================
     @PostMapping("/track")
     public ResponseEntity<?> trackFeature(@RequestBody FeatureClickDTO dto) {
 
@@ -41,17 +45,26 @@ public class FeatureClickController {
             return ResponseEntity.badRequest().body("Feature name required");
         }
 
+        if (dto.getUsername() == null || dto.getUsername().isBlank()) {
+            return ResponseEntity.badRequest().body("Username required");
+        }
+
+        User user = userRepository.findByUsername(dto.getUsername());
+
+        if (user == null) {
+            return ResponseEntity.badRequest().body("User not found");
+        }
+
         FeatureClick click = new FeatureClick();
         click.setFeatureName(dto.getFeatureName());
+        click.setUser(user);
+        click.setTimestamp(LocalDateTime.now());
 
         featureClickService.saveClick(click);
 
         return ResponseEntity.ok("Tracked");
     }
 
-    // ==============================
-    // ✅ Top Features
-    // ==============================
     @GetMapping("/top")
     public ResponseEntity<List<FeatureClickDTO>> getTopFeatures(
             @RequestParam(defaultValue = "5") int limit) {
@@ -61,61 +74,49 @@ public class FeatureClickController {
         );
     }
 
-    // ==============================
-    // ✅ Dashboard Summary
-    // ==============================
     @GetMapping("/dashboard")
     public ResponseEntity<DashboardDTO> getDashboard() {
-
         return ResponseEntity.ok(
                 featureClickService.getDashboardStats()
         );
     }
 
-    // ==============================
-    // ✅ Daily Analytics
-    // ==============================
     @GetMapping("/analytics/daily")
     public ResponseEntity<List<DailyAnalyticsDTO>> getDailyAnalytics() {
-
         return ResponseEntity.ok(
                 featureClickService.getClicksPerDay()
         );
     }
 
-    // ==============================
-    // 🔥 SAFE Age + Gender + Date Filter
-    // ==============================
     @GetMapping("/analytics/filter")
-public ResponseEntity<List<FeatureAnalyticsDTO>> getFilteredAnalytics(
+    public ResponseEntity<List<FeatureAnalyticsDTO>> getFilteredAnalytics(
+            @RequestParam(required = false) String start,
+            @RequestParam(required = false) String end,
+            @RequestParam(required = false) String age,
+            @RequestParam(required = false) String gender) {
 
-        @RequestParam(required = false) String start,
-        @RequestParam(required = false) String end,
-        @RequestParam(required = false) String age,
-        @RequestParam(required = false) String gender) {
+        LocalDateTime startDateTime = null;
+        LocalDateTime endDateTime = null;
 
-    LocalDateTime startDateTime = null;
-    LocalDateTime endDateTime = null;
+        try {
+            if (start != null && !start.isBlank()) {
+                startDateTime = LocalDate.parse(start).atStartOfDay();
+            }
 
-    try {
-        if (start != null && !start.isBlank()) {
-            startDateTime = LocalDate.parse(start).atStartOfDay();
+            if (end != null && !end.isBlank()) {
+                endDateTime = LocalDate.parse(end).atTime(23, 59, 59);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
         }
 
-        if (end != null && !end.isBlank()) {
-            endDateTime = LocalDate.parse(end).atTime(23, 59, 59);
-        }
-    } catch (Exception e) {
-        return ResponseEntity.badRequest().build();
+        return ResponseEntity.ok(
+                featureClickService.getFilteredAnalytics(
+                        startDateTime,
+                        endDateTime,
+                        age,
+                        gender
+                )
+        );
     }
-
-    return ResponseEntity.ok(
-            featureClickService.getFilteredAnalytics(
-                    startDateTime,
-                    endDateTime,
-                    age,
-                    gender
-            )
-    );
-}
 }
