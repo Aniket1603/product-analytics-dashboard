@@ -35,10 +35,8 @@ public class SeedController {
     @GetMapping
     public String seedData() {
 
-        // Clear old data
-        featureClickRepository.deleteAll();
-        userRepository.deleteAll();
-
+       featureClickRepository.deleteAllInBatch();
+userRepository.deleteAllInBatch();
         // Create Users
         User u1 = new User("rahul", passwordEncoder.encode("1234"), 17, "Male");
         User u2 = new User("priya", passwordEncoder.encode("1234"), 25, "Female");
