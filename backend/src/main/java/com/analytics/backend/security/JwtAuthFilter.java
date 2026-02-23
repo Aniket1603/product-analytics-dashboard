@@ -1,6 +1,7 @@
 package com.analytics.backend.security;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,22 +27,33 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
     }
-@Override
-protected void doFilterInternal(
-        HttpServletRequest request,
-        HttpServletResponse response,
-        FilterChain filterChain)
-        throws ServletException, IOException {
 
-    // ✅ IMPORTANT — Allow preflight requests
-    if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-        filterChain.doFilter(request, response);
-        return;
-    }
+    @Override
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
+                                    throws ServletException, IOException {
 
-    String authHeader = request.getHeader("Authorization");
+        // ✅ Allow preflight requests (CORS FIX)
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-    if (authHeader != null && authHeader.startsWith("Bearer ")) {
+        String path = request.getRequestURI();
+
+        // ✅ Skip authentication for auth & seed endpoints
+        if (path.startsWith("/api/auth") || path.startsWith("/api/seed")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String authHeader = request.getHeader("Authorization");
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         String token = authHeader.substring(7);
 
@@ -50,7 +62,7 @@ protected void doFilterInternal(
             String username = jwtUtil.extractUsername(token);
 
             if (username != null &&
-                    SecurityContextHolder.getContext().getAuthentication() == null) {
+                SecurityContextHolder.getContext().getAuthentication() == null) {
 
                 User user = userRepository.findByUsername(username);
 
@@ -60,7 +72,7 @@ protected void doFilterInternal(
                             new UsernamePasswordAuthenticationToken(
                                     username,
                                     null,
-                                    java.util.List.of(() -> "ROLE_USER")
+                                    List.of(() -> "ROLE_USER")
                             );
 
                     authToken.setDetails(
@@ -74,10 +86,9 @@ protected void doFilterInternal(
             }
 
         } catch (Exception e) {
-            // ignore invalid token
+            // Invalid token → ignore silently
         }
-    }
 
-    filterChain.doFilter(request, response);
-}
+        filterChain.doFilter(request, response);
+    }
 }
