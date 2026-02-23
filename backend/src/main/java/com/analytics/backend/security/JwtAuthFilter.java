@@ -26,53 +26,58 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
     }
+@Override
+protected void doFilterInternal(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        FilterChain filterChain)
+        throws ServletException, IOException {
 
-    @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain)
-            throws ServletException, IOException {
-
-        String authHeader = request.getHeader("Authorization");
-
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-
-            String token = authHeader.substring(7);
-
-            try {
-
-                String username = jwtUtil.extractUsername(token);
-
-                if (username != null &&
-                        SecurityContextHolder.getContext().getAuthentication() == null) {
-
-                    User user = userRepository.findByUsername(username);
-
-                    if (user != null && jwtUtil.validateToken(token, username)) {
-
-                        UsernamePasswordAuthenticationToken authToken =
-                                new UsernamePasswordAuthenticationToken(
-                                        username,
-                                        null,
-                                        java.util.List.of(() -> "ROLE_USER")
-                                );
-
-                        authToken.setDetails(
-                                new WebAuthenticationDetailsSource()
-                                        .buildDetails(request)
-                        );
-
-                        SecurityContextHolder.getContext()
-                                .setAuthentication(authToken);
-                    }
-                }
-
-            } catch (Exception e) {
-                // Invalid token → ignore
-            }
-        }
-
+    // ✅ IMPORTANT — Allow preflight requests
+    if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
         filterChain.doFilter(request, response);
+        return;
     }
+
+    String authHeader = request.getHeader("Authorization");
+
+    if (authHeader != null && authHeader.startsWith("Bearer ")) {
+
+        String token = authHeader.substring(7);
+
+        try {
+
+            String username = jwtUtil.extractUsername(token);
+
+            if (username != null &&
+                    SecurityContextHolder.getContext().getAuthentication() == null) {
+
+                User user = userRepository.findByUsername(username);
+
+                if (user != null && jwtUtil.validateToken(token, username)) {
+
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    username,
+                                    null,
+                                    java.util.List.of(() -> "ROLE_USER")
+                            );
+
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource()
+                                    .buildDetails(request)
+                    );
+
+                    SecurityContextHolder.getContext()
+                            .setAuthentication(authToken);
+                }
+            }
+
+        } catch (Exception e) {
+            // ignore invalid token
+        }
+    }
+
+    filterChain.doFilter(request, response);
+}
 }
