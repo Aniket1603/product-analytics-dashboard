@@ -9,9 +9,9 @@ FROM eclipse-temurin:17-jdk
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
-# Render provides PORT env variable automatically
-ENV PORT=10000
+# Render dynamic port support
+ENV PORT=8080
 
-EXPOSE 10000
+EXPOSE 8080
 
-CMD java -Dserver.port=$PORT -Dserver.address=0.0.0.0 -jar app.jar
+ENTRYPOINT ["sh", "-c", "java -Dserver.port=$PORT -jar app.jar"]
