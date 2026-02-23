@@ -6,7 +6,7 @@ import java.util.Random;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -14,6 +14,7 @@ import com.analytics.backend.model.FeatureClick;
 import com.analytics.backend.model.User;
 import com.analytics.backend.repository.FeatureClickRepository;
 import com.analytics.backend.repository.UserRepository;
+
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/seed")
@@ -31,13 +32,14 @@ public class SeedController {
         this.passwordEncoder = passwordEncoder;
     }
 
-    @PostMapping
+    @GetMapping
     public String seedData() {
 
+        // Clear old data
         featureClickRepository.deleteAll();
         userRepository.deleteAll();
 
-        // 🔥 Create Users
+        // Create Users
         User u1 = new User("rahul", passwordEncoder.encode("1234"), 17, "Male");
         User u2 = new User("priya", passwordEncoder.encode("1234"), 25, "Female");
         User u3 = new User("amit", passwordEncoder.encode("1234"), 35, "Male");
@@ -59,7 +61,7 @@ public class SeedController {
 
         Random random = new Random();
 
-        // 🔥 Generate 30 days data
+        // Generate 30 days data
         for (int day = 0; day < 30; day++) {
 
             LocalDateTime baseDate = LocalDateTime.now().minusDays(day);
