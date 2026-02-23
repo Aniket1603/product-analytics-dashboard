@@ -8,5 +8,10 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:17-jdk
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java","-jar","app.jar"]
+
+# 🔥 IMPORTANT — Use dynamic PORT from Render
+ENV PORT=8080
+EXPOSE ${PORT}
+
+# 🔥 Bind to 0.0.0.0 and dynamic port
+ENTRYPOINT ["sh", "-c", "java -Dserver.port=$PORT -Dserver.address=0.0.0.0 -jar app.jar"]
